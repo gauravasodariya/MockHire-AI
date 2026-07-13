@@ -23,15 +23,19 @@ function Auth({ isModel = false, onClose }) {
     setSuccess("");
     setLoading(true);
     try {
+      console.log("Starting Google sign in...");
       const response = await signInWithPopup(auth, provider);
+      console.log("Firebase sign in successful", response.user);
       const user = response.user;
       const name = user.displayName;
       const email = user.email;
+      console.log("Sending to backend...", { name, email });
       const result = await axios.post(
         serverUrl + "/api/auth/google",
         { name, email },
         { withCredentials: true },
       );
+      console.log("Backend response successful", result.data);
       setUser(result.data);
       setSuccess("Login successful! Redirecting...");
       setTimeout(() => {
@@ -39,10 +43,32 @@ function Auth({ isModel = false, onClose }) {
         navigate("/");
       }, 1500);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Google authentication failed. Please try again.",
-      );
+      console.error("Google auth error:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+      });
+      let errorMessage = "Google authentication failed. Please try again.";
+
+      // Firebase specific errors
+      if (err.code) {
+        if (err.code === "auth/unauthorized-domain") {
+          errorMessage =
+            "This domain is not authorized for Google sign-in. Please contact support.";
+        } else if (err.code === "auth/popup-closed-by-user") {
+          errorMessage = "Sign-in popup was closed. Please try again.";
+        } else if (err.code === "auth/cancelled-popup-request") {
+          errorMessage = "Sign-in request was cancelled. Please try again.";
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err.response?.data?.message) {
+        // Backend errors
+        errorMessage = err.response.data.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
