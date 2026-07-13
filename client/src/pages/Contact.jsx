@@ -132,7 +132,7 @@ function Contact() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition-all text-lg'
+                      className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition-all text-base'
                       placeholder='Enter your full name'
                     />
                   </div>
@@ -143,7 +143,7 @@ function Contact() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition-all text-lg'
+                      className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition-all text-base'
                       placeholder='Enter your email address'
                     />
                   </div>
@@ -167,7 +167,7 @@ function Contact() {
                     rows={5}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none resize-none text-lg'
+                    className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none resize-none text-base'
                     placeholder='Tell us more about your inquiry...'
                   />
                 </div>
