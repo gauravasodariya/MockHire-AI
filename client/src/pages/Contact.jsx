@@ -68,7 +68,7 @@ function Contact() {
                     <FaEnvelope size={22} />
                   </div>
                   <div>
-                    <h4 className='font-bold text-lg mb-1 text-emerald-800'>Email</h4>
+                    <h4 className='font-bold text-base mb-1 text-emerald-800'>Email</h4>
                     <p className='text-gray-600 text-lg'>gauravasodariya44@gmail.com</p>
                   </div>
                 </div>
@@ -78,8 +78,8 @@ function Contact() {
                     <FaPhoneAlt size={22} />
                   </div>
                   <div>
-                    <h4 className='font-bold text-lg mb-1 text-emerald-800'>Phone</h4>
-                    <p className='text-gray-600 text-lg'>+91 8799300210</p>
+                    <h4 className='font-bold text-base mb-1 text-emerald-800'>Phone</h4>
+                    <p className='text-gray-600 text-base'>+91 8799300210</p>
                   </div>
                 </div>
 
@@ -88,8 +88,8 @@ function Contact() {
                     <FaMapMarkerAlt size={22} />
                   </div>
                   <div>
-                    <h4 className='font-bold text-lg mb-1 text-emerald-800'>Address</h4>
-                    <p className='text-gray-600 text-lg'>Gandhinagar, Gujarat, India</p>
+                    <h4 className='font-bold text-base mb-1 text-emerald-800'>Address</h4>
+                    <p className='text-gray-600 text-base'>Gandhinagar, Gujarat, India</p>
                   </div>
                 </div>
               </div>
@@ -126,7 +126,7 @@ function Contact() {
               <form onSubmit={handleSubmit} className='space-y-6'>
                 <div className='grid md:grid-cols-2 gap-6'>
                   <div className='space-y-2'>
-                    <label className='block text-gray-800 font-semibold text-lg'>Full Name</label>
+                    <label className='block text-gray-800 font-semibold text-base'>Full Name</label>
                     <input
                       type='text'
                       required
@@ -137,7 +137,7 @@ function Contact() {
                     />
                   </div>
                   <div className='space-y-2'>
-                    <label className='block text-gray-800 font-semibold text-lg'>Email Address</label>
+                    <label className='block text-gray-800 font-semibold text-base'>Email Address</label>
                     <input
                       type='email'
                       required
@@ -148,21 +148,20 @@ function Contact() {
                     />
                   </div>
                 </div>
-
                 <div className='space-y-2'>
-                  <label className='block text-gray-800 font-semibold text-lg'>Subject</label>
+                  <label className='block text-gray-800 font-semibold text-base'>Subject</label>
                   <input
                     type='text'
                     required
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition-all text-lg'
+                    className='w-full px-5 py-4 border-0 rounded-2xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition-all text-base'
                     placeholder='How can we help?'
                   />
                 </div>
 
                 <div className='space-y-2'>
-                  <label className='block text-gray-800 font-semibold text-lg'>Message</label>
+                  <label className='block text-gray-800 font-semibold text-base'>Message</label>
                   <textarea
                     required
                     rows={5}
@@ -176,7 +175,7 @@ function Contact() {
                 <button
                   type='submit'
                   disabled={loading}
-                  className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:opacity-90 disabled:opacity-50 text-white py-5 rounded-2xl font-bold text-xl shadow-xl transition-all hover:shadow-2xl'
+                  className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-2xl font-bold text-lg shadow-xl transition-all hover:shadow-2xl cursor-pointer'
                 >
                   {loading ? (
                     <div className='flex items-center justify-center gap-2'>
