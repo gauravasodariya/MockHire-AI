@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
 import { FcGoogle } from "react-icons/fc";
@@ -7,15 +7,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { signInWithPopup } from "firebase/auth";
 import { serverUrl } from "../App";
-import { auth, provider } from '../utils/firebase'
-import { useAuth } from "../context/authContext"
+import { auth, provider } from "../utils/firebase";
+import { useAuth } from "../context/authContext";
 import { useNavigate } from "react-router-dom";
 
 function Auth({ isModel = false, onClose }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setUser } = useAuth()
+  const { setUser } = useAuth();
   const navigate = useNavigate();
 
   const handleGoogleAuth = async () => {
@@ -23,12 +23,15 @@ function Auth({ isModel = false, onClose }) {
     setSuccess("");
     setLoading(true);
     try {
-      const response = await signInWithPopup(auth, provider)
-      const user = response.user
-      const name = user.displayName
-      const email = user.email
-      const result = await axios.post(serverUrl + "/api/auth/google",
-        { name, email }, { withCredentials: true })
+      const response = await signInWithPopup(auth, provider);
+      const user = response.user;
+      const name = user.displayName;
+      const email = user.email;
+      const result = await axios.post(
+        serverUrl + "/api/auth/google",
+        { name, email },
+        { withCredentials: true },
+      );
       setUser(result.data);
       setSuccess("Login successful! Redirecting...");
       setTimeout(() => {
@@ -36,25 +39,32 @@ function Auth({ isModel = false, onClose }) {
         navigate("/");
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Google authentication failed. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          "Google authentication failed. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50 flex items-center justify-center px-6 py-20">
+    <div
+      className={`w-full flex items-center justify-center px-6 py-20 ${isModel ? "" : "min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50"}`}
+    >
       <motion.div
         initial={{ opacity: 0, y: -40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.05 }}
         className={`w-full relative
-            ${isModel ? 'max-w-md p-8 rounded-3xl' : 'max-w-lg p-12 rounded-[32px]'}
-            rounded-3xl bg-white shadow-2xl border border-gray-200`}>
-
+            ${isModel ? "max-w-md p-8 rounded-3xl" : "max-w-lg p-12 rounded-[32px]"}
+            rounded-3xl bg-white shadow-2xl border border-gray-200`}
+      >
         {isModel && (
-          <button onClick={onClose}
-            className="absolute top-4 right-4 text-gray-700 hover:text-black cursor-pointer">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-700 hover:text-black cursor-pointer"
+          >
             <FaTimes size={18} />
           </button>
         )}
@@ -62,7 +72,9 @@ function Auth({ isModel = false, onClose }) {
           <div className="bg-emerald-600 text-white p-2 rounded-lg">
             <BsRobot size={18} />
           </div>
-          <h2 className="text-lg font-semibold text-emerald-800">MockHire AI</h2>
+          <h2 className="text-lg font-semibold text-emerald-800">
+            MockHire AI
+          </h2>
         </div>
 
         <AnimatePresence>
@@ -88,23 +100,25 @@ function Auth({ isModel = false, onClose }) {
           )}
         </AnimatePresence>
 
-        <h1 className='text-2xl md:text-3xl font-semibold text-center leading-snug mb-4'>
+        <h1 className="text-2xl md:text-3xl font-semibold text-center leading-snug mb-4">
           Continue with
-          <span className='bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full inline-flex items-center gap-2'>
+          <span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full inline-flex items-center gap-2">
             <IoSparkles size={16} />
             AI Smart Interview
           </span>
         </h1>
 
         <p className="text-gray-500 text-center text-sm md:text-base leading-relaxed mb-8">
-          Sign in to start AI-powered mock interviews, track your progress, and unlock detailed performance insights.
+          Sign in to start AI-powered mock interviews, track your progress, and
+          unlock detailed performance insights.
         </p>
         <motion.button
           onClick={handleGoogleAuth}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 py-3 bg-emerald-600 text-white rounded-full shadow-md cursor-pointer disabled:opacity-50 hover:bg-emerald-700"
+          className="w-full flex items-center justify-center gap-3 py-3 bg-gray-600 text-white rounded-full shadow-md cursor-pointer disabled:opacity-50 hover:bg-gray-700"
           whileHover={!loading ? { opacity: 0.9, scale: 1.03 } : {}}
-          whileTap={!loading ? { opacity: 1, scale: 0.98 } : {}}>
+          whileTap={!loading ? { opacity: 1, scale: 0.98 } : {}}
+        >
           {loading ? (
             <div className="flex items-center justify-center gap-2">
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -119,6 +133,6 @@ function Auth({ isModel = false, onClose }) {
         </motion.button>
       </motion.div>
     </div>
-  )
+  );
 }
-export default Auth
+export default Auth;
