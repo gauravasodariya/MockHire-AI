@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BsRobot } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
 import { FcGoogle } from "react-icons/fc";
 import { FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { signInWithPopup } from "firebase/auth";
+import {
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+} from "firebase/auth";
 import { serverUrl } from "../App";
 import { auth, provider } from "../utils/firebase";
 import { useAuth } from "../context/authContext";
@@ -18,17 +22,70 @@ function Auth({ isModel = false, onClose }) {
   const { setAuth } = useAuth();
   const navigate = useNavigate();
 
+  // Handle redirect result when component mounts
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          const name = result.user.displayName;
+          const email = result.user.email;
+          const backendResult = await axios.post(
+            serverUrl + "/api/auth/google",
+            { name, email },
+          );
+          // Backend returns { user, token }
+          setAuth(backendResult.data.user, backendResult.data.token);
+          setSuccess("Login successful! Redirecting...");
+          setTimeout(() => {
+            if (isModel && onClose) onClose();
+            navigate("/");
+          }, 1500);
+        }
+      } catch (err) {
+        console.error("Redirect auth error:", err);
+        let errorMessage = "Google authentication failed. Please try again.";
+        if (err.code) {
+          errorMessage = err.message;
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        setError(errorMessage);
+      }
+    };
+    handleRedirectResult();
+  }, [setAuth, navigate, isModel, onClose]);
+
   const handleGoogleAuth = async () => {
     setError("");
     setSuccess("");
     setLoading(true);
     try {
-      const response = await signInWithPopup(auth, provider);
+      console.log("Starting Google sign in...");
+      let response;
+      try {
+        response = await signInWithPopup(auth, provider);
+      } catch (popupErr) {
+        // If popup is blocked, try redirect
+        if (popupErr.code === "auth/popup-blocked" || popupErr.code === "auth/cancelled-popup-request") {
+          console.log("Popup blocked or cancelled, falling back to redirect");
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupErr;
+      }
+
+      console.log("Firebase sign in successful", response.user);
       const user = response.user;
-      const result = await axios.post(serverUrl + "/api/auth/google", {
-        name: user.displayName,
-        email: user.email,
-      });
+      const name = user.displayName;
+      const email = user.email;
+      console.log("Sending to backend...", { name, email });
+      const result = await axios.post(
+        serverUrl + "/api/auth/google",
+        { name, email },
+      );
+      console.log("Backend response successful", result.data);
+      // Backend returns { user, token }
       setAuth(result.data.user, result.data.token);
       setSuccess("Login successful! Redirecting...");
       setTimeout(() => {
@@ -37,18 +94,28 @@ function Auth({ isModel = false, onClose }) {
       }, 1500);
     } catch (err) {
       console.error("Google auth error:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+      });
       let errorMessage = "Google authentication failed. Please try again.";
-      if (err.code === "auth/popup-blocked") {
-        errorMessage = "Popup blocked. Please allow popups for this site in your browser settings and try again.";
-      } else if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in popup was closed. Please try again.";
-      } else if (err.code === "auth/unauthorized-domain") {
-        errorMessage = "This domain is not authorized for Google sign-in. Please contact support.";
+
+      // Firebase specific errors
+      if (err.code) {
+        if (err.code === "auth/unauthorized-domain") {
+          errorMessage =
+            "This domain is not authorized for Google sign-in. Please contact support.";
+        } else if (err.code === "auth/popup-closed-by-user") {
+          errorMessage = "Sign-in popup was closed. Please try again.";
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
       } else if (err.response?.data?.message) {
+        // Backend errors
         errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
       }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -122,7 +189,7 @@ function Auth({ isModel = false, onClose }) {
         <motion.button
           onClick={handleGoogleAuth}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 py-3 bg-emerald-600 text-white rounded-full shadow-md cursor-pointer disabled:opacity-50 hover:bg-emerald-700"
+          className="w-full flex items-center justify-center gap-3 py-3 bg-gray-600 text-white rounded-full shadow-md cursor-pointer disabled:opacity-50 hover:bg-gray-700"
           whileHover={!loading ? { opacity: 0.9, scale: 1.03 } : {}}
           whileTap={!loading ? { opacity: 1, scale: 0.98 } : {}}
         >
