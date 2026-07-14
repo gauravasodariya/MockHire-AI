@@ -1,18 +1,8 @@
 import React from "react";
-import { useEffect } from "react";
 import Auth from "../pages/Auth";
-import { useAuth } from "../context/authContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 function AuthModel({ onClose }) {
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      onClose();
-    }
-  }, [user, onClose]);
-
   return (
     <AnimatePresence>
       <motion.div

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { FaMicrophone, FaMicrophoneSlash, FaVideo } from "react-icons/fa"
 import axios from "axios"
 import { serverUrl } from '../App'
+import { getAuthHeaders } from '../context/authContext'
 import * as faceapi from '@vladmandic/face-api'
 
 function InterviewSession({ interviewData, onFinish }) {
@@ -313,7 +314,7 @@ function InterviewSession({ interviewData, onFinish }) {
         questionIndex: currentIndex,
         answer,
         timeTaken: questions[currentIndex].timeLimit - timeLeft,
-      }, { withCredentials: true });
+      }, { headers: getAuthHeaders() });
 
       setFeedback(result.data.feedback);
       speakText(result.data.feedback);
@@ -349,7 +350,7 @@ function InterviewSession({ interviewData, onFinish }) {
     setIsMicOn(false);
     setError("");
     try {
-      const result = await axios.post(serverUrl + "/api/interview/finish-interview", { interviewId }, { withCredentials: true });
+      const result = await axios.post(serverUrl + "/api/interview/finish-interview", { interviewId }, { headers: getAuthHeaders() });
 
       console.log(result.data);
       onFinish(result.data);

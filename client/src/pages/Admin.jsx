@@ -14,7 +14,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 import { serverUrl } from "../App";
-import { useAuth } from "../context/authContext";
+import { useAuth, getAuthHeaders } from "../context/authContext";
 import { useNavigate } from "react-router-dom";
 
 function Admin() {
@@ -59,20 +59,20 @@ function Admin() {
         const [statsRes, contactsRes, usersRes, paymentsRes, plansRes] =
           await Promise.all([
             axios.get(`${serverUrl}/api/admin/stats`, {
-              withCredentials: true,
+              headers: getAuthHeaders(),
             }),
             axios.get(`${serverUrl}/api/admin/contacts`, {
-              withCredentials: true,
+              headers: getAuthHeaders(),
             }),
             axios.get(`${serverUrl}/api/admin/users`, {
-              withCredentials: true,
+              headers: getAuthHeaders(),
               params: { search: userSearch },
             }),
             axios.get(`${serverUrl}/api/admin/payments`, {
-              withCredentials: true,
+              headers: getAuthHeaders(),
             }),
             axios.get(`${serverUrl}/api/admin/plans`, {
-              withCredentials: true,
+              headers: getAuthHeaders(),
             }),
           ]);
         setStats(statsRes.data);
@@ -97,7 +97,7 @@ function Admin() {
       await axios.patch(
         `${serverUrl}/api/admin/users/${userId}/role`,
         { role: newRole },
-        { withCredentials: true },
+        { headers: getAuthHeaders() },
       );
       setUsers(
         users.map((u) => (u._id === userId ? { ...u, role: newRole } : u)),
@@ -117,7 +117,7 @@ function Admin() {
       await axios.patch(
         `${serverUrl}/api/admin/contacts/${contactId}/status`,
         { status: newStatus },
-        { withCredentials: true },
+        { headers: getAuthHeaders() },
       );
       setContacts(
         contacts.map((c) =>
@@ -200,7 +200,7 @@ function Admin() {
         await axios.patch(
           `${serverUrl}/api/admin/plans/${editingPlan._id}`,
           planForm,
-          { withCredentials: true },
+          { headers: getAuthHeaders() },
         );
         setPlans(
           plans.map((p) =>
@@ -210,7 +210,7 @@ function Admin() {
         setSuccess("Plan updated successfully!");
       } else {
         const res = await axios.post(`${serverUrl}/api/admin/plans`, planForm, {
-          withCredentials: true,
+          headers: getAuthHeaders(),
         });
         setPlans([res.data, ...plans]);
         setSuccess("Plan created successfully!");
@@ -229,7 +229,7 @@ function Admin() {
     setSuccess("");
     try {
       await axios.delete(`${serverUrl}/api/admin/plans/${planId}`, {
-        withCredentials: true,
+        headers: getAuthHeaders(),
       });
       setPlans(plans.filter((p) => p._id !== planId));
       setSuccess("Plan deleted successfully!");

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { serverUrl } from "../App";
-import { useAuth } from "../context/authContext";
+import { useAuth, getAuthHeaders } from "../context/authContext";
 function Pricing() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
@@ -13,7 +13,7 @@ function Pricing() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
-  const { setUser } = useAuth();
+  const { setAuth } = useAuth();
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -45,7 +45,7 @@ function Pricing() {
           amount: amount,
           credits: plan.credits,
         },
-        { withCredentials: true },
+        { headers: getAuthHeaders() },
       );
 
       const options = {
@@ -61,9 +61,9 @@ function Pricing() {
             const verifypay = await axios.post(
               serverUrl + "/api/payment/verify",
               response,
-              { withCredentials: true },
+              { headers: getAuthHeaders() },
             );
-            setUser(verifypay.data.user);
+            setAuth(verifypay.data.user, null);
             setSuccess("Payment Successful! Credits Added.");
             setTimeout(() => {
               navigate("/");

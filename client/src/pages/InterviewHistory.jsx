@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { serverUrl } from "../App";
+import { getAuthHeaders } from "../context/authContext";
 import { FaArrowLeft } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -16,7 +17,7 @@ function InterviewHistory() {
       try {
         const result = await axios.get(
           serverUrl + "/api/interview/get-interview",
-          { withCredentials: true },
+          { headers: getAuthHeaders() },
         );
         setInterviews(result.data);
       } catch (err) {

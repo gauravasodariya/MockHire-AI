@@ -19,7 +19,7 @@ function Auth({ isModel = false, onClose }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setUser } = useAuth();
+  const { setAuth } = useAuth();
   const navigate = useNavigate();
 
   // Handle redirect result when component mounts
@@ -33,9 +33,9 @@ function Auth({ isModel = false, onClose }) {
           const backendResult = await axios.post(
             serverUrl + "/api/auth/google",
             { name, email },
-            { withCredentials: true },
           );
-          setUser(backendResult.data);
+          // Backend returns { user, token }
+          setAuth(backendResult.data.user, backendResult.data.token);
           setSuccess("Login successful! Redirecting...");
           setTimeout(() => {
             if (isModel && onClose) onClose();
@@ -54,7 +54,7 @@ function Auth({ isModel = false, onClose }) {
       }
     };
     handleRedirectResult();
-  }, [setUser, navigate, isModel, onClose]);
+  }, [setAuth, navigate, isModel, onClose]);
 
   const handleGoogleAuth = async () => {
     setError("");
@@ -67,10 +67,7 @@ function Auth({ isModel = false, onClose }) {
         response = await signInWithPopup(auth, provider);
       } catch (popupErr) {
         // If popup is blocked, try redirect
-        if (
-          popupErr.code === "auth/popup-blocked" ||
-          popupErr.code === "auth/cancelled-popup-request"
-        ) {
+        if (popupErr.code === "auth/popup-blocked" || popupErr.code === "auth/cancelled-popup-request") {
           console.log("Popup blocked or cancelled, falling back to redirect");
           await signInWithRedirect(auth, provider);
           return;
@@ -86,10 +83,10 @@ function Auth({ isModel = false, onClose }) {
       const result = await axios.post(
         serverUrl + "/api/auth/google",
         { name, email },
-        { withCredentials: true },
       );
       console.log("Backend response successful", result.data);
-      setUser(result.data);
+      // Backend returns { user, token }
+      setAuth(result.data.user, result.data.token);
       setSuccess("Login successful! Redirecting...");
       setTimeout(() => {
         if (isModel && onClose) onClose();

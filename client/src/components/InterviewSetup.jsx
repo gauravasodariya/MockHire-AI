@@ -10,7 +10,7 @@ import {
 import { useState } from 'react';
 import axios from "axios"
 import { serverUrl } from '../App';
-import { useAuth } from '../context/authContext';
+import { useAuth, getAuthHeaders } from '../context/authContext';
 
 function InterviewSetup({ onStart }) {
   const { user, setUser } = useAuth()
@@ -37,7 +37,7 @@ function InterviewSetup({ onStart }) {
     formdata.append("resume", resumeFile)
 
     try {
-      const result = await axios.post(serverUrl + "/api/interview/analyze-resume", formdata, { withCredentials: true })
+      const result = await axios.post(serverUrl + "/api/interview/analyze-resume", formdata, { headers: getAuthHeaders() })
       setRole(result.data.role || "");
       setExperience(result.data.experience || "");
       setProjects(result.data.projects || []);
@@ -58,7 +58,7 @@ function InterviewSetup({ onStart }) {
     setSuccess("");
     setLoading(true)
     try {
-      const result = await axios.post(serverUrl + "/api/interview/generate-questions", { role, experience, mode, resumeText, projects, skills }, { withCredentials: true })
+      const result = await axios.post(serverUrl + "/api/interview/generate-questions", { role, experience, mode, resumeText, projects, skills }, { headers: getAuthHeaders() })
       if (user) {
         setUser({ ...user, credits: result.data.creditsLeft })
       }

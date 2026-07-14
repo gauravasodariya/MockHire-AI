@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
+import { getAuthHeaders } from '../context/authContext';
 import { FaArrowLeft } from 'react-icons/fa';
 import { motion, AnimatePresence } from "framer-motion"
 import { buildStyles, CircularProgressbar } from 'react-circular-progressbar';
@@ -20,7 +21,7 @@ function InterviewReport() {
     const fetchReport = async () => {
       setError("");
       try {
-        const res = await axios.get(`${serverUrl}/api/interview/report/${id}`, { withCredentials: true });
+        const res = await axios.get(`${serverUrl}/api/interview/report/${id}`, { headers: getAuthHeaders() });
         setReport(res.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load report. Please try again.");
