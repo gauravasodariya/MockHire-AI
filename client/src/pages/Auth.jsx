@@ -39,9 +39,9 @@ function Auth({ isModel = false, onClose }) {
     setLoading(true);
     try {
       console.log("Starting Google sign in...");
-      let response;
       try {
-        response = await signInWithPopup(auth, provider);
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged in authContext will handle the rest
       } catch (popupErr) {
         // If popup is blocked, try redirect
         if (popupErr.code === "auth/popup-blocked" || popupErr.code === "auth/cancelled-popup-request") {
@@ -51,24 +51,6 @@ function Auth({ isModel = false, onClose }) {
         }
         throw popupErr;
       }
-
-      console.log("Firebase sign in successful", response.user);
-      const user = response.user;
-      const name = user.displayName;
-      const email = user.email;
-      console.log("Sending to backend...", { name, email });
-      const result = await axios.post(
-        serverUrl + "/api/auth/google",
-        { name, email },
-      );
-      console.log("Backend response successful", result.data);
-      // Backend returns { user, token }
-      setAuth(result.data.user, result.data.token);
-      setSuccess("Login successful! Redirecting...");
-      setTimeout(() => {
-        if (isModel && onClose) onClose();
-        navigate("/");
-      }, 1500);
     } catch (err) {
       console.error("Google auth error:", err);
       console.error("Error details:", {

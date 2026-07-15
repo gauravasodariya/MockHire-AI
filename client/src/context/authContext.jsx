@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import axios from "axios";
-import { getRedirectResult } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../utils/firebase";
 import { serverUrl } from "../App";
 
@@ -24,32 +24,37 @@ export const AuthProvider = ({ children }) => {
   
   console.log("[AuthContext] VITE_FIREBASE_API_KEY:", import.meta.env.VITE_FIREBASE_API_KEY);
 
-  // First handle redirect result on app load
+  // Listen for auth state changes (including redirects and popups)
   useEffect(() => {
-    const processRedirect = async () => {
-      console.log("[AuthContext] Checking redirect result...");
-      try {
-        const result = await getRedirectResult(auth);
-        console.log("[AuthContext] Redirect result:", result);
-        if (result?.user) {
-          const name = result.user.displayName;
-          const email = result.user.email;
-          console.log("[AuthContext] Sending to backend:", { name, email });
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("[AuthContext] Auth state changed:", firebaseUser);
+      
+      // If we already have a user from localStorage/checkAuth, skip to avoid duplicates
+      if (firebaseUser && !user) {
+        const name = firebaseUser.displayName;
+        const email = firebaseUser.email;
+        console.log("[AuthContext] Sending to backend:", { name, email });
+        try {
           const backendResult = await axios.post(
             serverUrl + "/api/auth/google",
             { name, email }
           );
           console.log("[AuthContext] Backend response:", backendResult.data);
           setAuth(backendResult.data.user, backendResult.data.token);
-        } else {
-          console.log("[AuthContext] No redirect result found");
+        } catch (err) {
+          console.error("[AuthContext] Backend auth error:", err);
         }
-      } catch (err) {
-        console.error("[AuthContext] Redirect auth error:", err);
       }
-    };
-    processRedirect();
-  }, []); // Empty dependency array = runs once on mount
+      
+      // If not logged in via Firebase, check localStorage
+      if (!firebaseUser && !user) {
+        setTimeout(() => checkAuth(), 100);
+      }
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, [user]); // Add user to dependencies to check if we already have one
 
   const checkAuth = useCallback(async () => {
     try {
@@ -85,6 +90,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Sign out from Firebase first
+      await signOut(auth);
+      // Then call backend logout
       await axios.get(`${serverUrl}/api/auth/logout`, {
         headers: getAuthHeaders(),
       });
