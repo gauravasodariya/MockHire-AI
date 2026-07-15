@@ -21,23 +21,31 @@ export const getAuthHeaders = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  console.log("[AuthContext] VITE_FIREBASE_API_KEY:", import.meta.env.VITE_FIREBASE_API_KEY);
 
   // First handle redirect result on app load
   useEffect(() => {
     const processRedirect = async () => {
+      console.log("[AuthContext] Checking redirect result...");
       try {
         const result = await getRedirectResult(auth);
+        console.log("[AuthContext] Redirect result:", result);
         if (result?.user) {
           const name = result.user.displayName;
           const email = result.user.email;
+          console.log("[AuthContext] Sending to backend:", { name, email });
           const backendResult = await axios.post(
             serverUrl + "/api/auth/google",
             { name, email }
           );
+          console.log("[AuthContext] Backend response:", backendResult.data);
           setAuth(backendResult.data.user, backendResult.data.token);
+        } else {
+          console.log("[AuthContext] No redirect result found");
         }
       } catch (err) {
-        console.error("Redirect auth error:", err);
+        console.error("[AuthContext] Redirect auth error:", err);
       }
     };
     processRedirect();
