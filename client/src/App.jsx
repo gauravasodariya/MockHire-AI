@@ -18,8 +18,11 @@ import Footer from "./components/Footer";
 export const serverUrl =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+
 const APP = () => {
   const { checkAuth, loading } = useAuth();
+  console.log("serverUrl:", serverUrl);
+  console.log("VITE_API_URL raw:", import.meta.env.VITE_API_URL);
 
   useEffect(() => {
     checkAuth();
