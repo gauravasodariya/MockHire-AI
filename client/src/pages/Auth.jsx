@@ -19,42 +19,19 @@ function Auth({ isModel = false, onClose }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setAuth } = useAuth();
+  const { setAuth, user } = useAuth();
   const navigate = useNavigate();
 
-  // Handle redirect result when component mounts
+  // When user logs in (via popup or redirect), show success and navigate
   useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          const name = result.user.displayName;
-          const email = result.user.email;
-          const backendResult = await axios.post(
-            serverUrl + "/api/auth/google",
-            { name, email },
-          );
-          // Backend returns { user, token }
-          setAuth(backendResult.data.user, backendResult.data.token);
-          setSuccess("Login successful! Redirecting...");
-          setTimeout(() => {
-            if (isModel && onClose) onClose();
-            navigate("/");
-          }, 1500);
-        }
-      } catch (err) {
-        console.error("Redirect auth error:", err);
-        let errorMessage = "Google authentication failed. Please try again.";
-        if (err.code) {
-          errorMessage = err.message;
-        } else if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        }
-        setError(errorMessage);
-      }
-    };
-    handleRedirectResult();
-  }, [setAuth, navigate, isModel, onClose]);
+    if (user) {
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => {
+        if (isModel && onClose) onClose();
+        navigate("/");
+      }, 1500);
+    }
+  }, [user, isModel, onClose, navigate]);
 
   const handleGoogleAuth = async () => {
     setError("");

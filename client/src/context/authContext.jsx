@@ -6,6 +6,8 @@ import React, {
   useCallback,
 } from "react";
 import axios from "axios";
+import { getRedirectResult } from "firebase/auth";
+import { auth } from "../utils/firebase";
 import { serverUrl } from "../App";
 
 const AuthContext = createContext();
@@ -19,6 +21,27 @@ export const getAuthHeaders = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // First handle redirect result on app load
+  useEffect(() => {
+    const processRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          const name = result.user.displayName;
+          const email = result.user.email;
+          const backendResult = await axios.post(
+            serverUrl + "/api/auth/google",
+            { name, email }
+          );
+          setAuth(backendResult.data.user, backendResult.data.token);
+        }
+      } catch (err) {
+        console.error("Redirect auth error:", err);
+      }
+    };
+    processRedirect();
+  }, []); // Empty dependency array = runs once on mount
 
   const checkAuth = useCallback(async () => {
     try {
