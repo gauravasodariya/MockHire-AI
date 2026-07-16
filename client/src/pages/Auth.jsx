@@ -5,7 +5,11 @@ import { FcGoogle } from "react-icons/fc";
 import { FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { signInWithRedirect, getRedirectResult } from "firebase/auth";
+import {
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+} from "firebase/auth";
 import { serverUrl } from "../App";
 import { auth, provider } from "../utils/firebase";
 import { useAuth } from "../context/authContext";
@@ -15,44 +19,42 @@ function Auth({ isModel = false, onClose }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setAuth, user } = useAuth();
+  const { setAuth } = useAuth();
   const navigate = useNavigate();
 
-  // When user logs in (via popup or redirect), show success and navigate
+  // Handle redirect result when component mounts
   useEffect(() => {
-    if (user) {
-      setSuccess("Login successful! Redirecting...");
-      setTimeout(() => {
-        if (isModel && onClose) onClose();
-        navigate("/");
-      }, 1500);
-    }
-  }, [user, isModel, onClose, navigate]);
-
-  // Handle the result of a redirect-based sign-in (fires once, on mount,
-  // after the browser comes back from accounts.google.com). This is what
-  // actually completes the sign-in and surfaces any real error instead of
-  // the flow silently hanging.
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          console.log("Redirect sign-in successful:", result.user);
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          const name = result.user.displayName;
+          const email = result.user.email;
+          const backendResult = await axios.post(
+            serverUrl + "/api/auth/google",
+            { name, email },
+          );
+          // Backend returns { user, token }
+          setAuth(backendResult.data.user, backendResult.data.token);
+          setSuccess("Login successful! Redirecting...");
+          setTimeout(() => {
+            if (isModel && onClose) onClose();
+            navigate("/");
+          }, 1500);
         }
-      })
-      .catch((err) => {
-        console.error("Redirect sign-in error:", err.code, err.message);
+      } catch (err) {
+        console.error("Redirect auth error:", err);
         let errorMessage = "Google authentication failed. Please try again.";
-        if (err.code === "auth/unauthorized-domain") {
-          errorMessage =
-            "This domain is not authorized for Google sign-in. Please contact support.";
-        } else if (err.message) {
+        if (err.code) {
           errorMessage = err.message;
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
         }
         setError(errorMessage);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      }
+    };
+    handleRedirectResult();
+  }, [setAuth, navigate, isModel, onClose]);
 
   const handleGoogleAuth = async () => {
     setError("");
@@ -60,16 +62,36 @@ function Auth({ isModel = false, onClose }) {
     setLoading(true);
     try {
       console.log("Starting Google sign in...");
-      // Popup sign-in is unreliable in production because the
-      // Cross-Origin-Opener-Policy header set on this domain blocks the
-      // SDK's window.closed check, which makes it misreport the popup as
-      // blocked/cancelled even when the user is actively signing in.
-      // signInWithRedirect avoids that entirely and works the same in
-      // both environments.
-      await signInWithRedirect(auth, provider);
-      // Browser navigates away here. getRedirectResult() above (and
-      // onAuthStateChanged in authContext) will pick up the result when
-      // the user is sent back to this page.
+      let response;
+      try {
+        response = await signInWithPopup(auth, provider);
+      } catch (popupErr) {
+        // If popup is blocked, try redirect
+        if (popupErr.code === "auth/popup-blocked" || popupErr.code === "auth/cancelled-popup-request") {
+          console.log("Popup blocked or cancelled, falling back to redirect");
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupErr;
+      }
+
+      console.log("Firebase sign in successful", response.user);
+      const user = response.user;
+      const name = user.displayName;
+      const email = user.email;
+      console.log("Sending to backend...", { name, email });
+      const result = await axios.post(
+        serverUrl + "/api/auth/google",
+        { name, email },
+      );
+      console.log("Backend response successful", result.data);
+      // Backend returns { user, token }
+      setAuth(result.data.user, result.data.token);
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => {
+        if (isModel && onClose) onClose();
+        navigate("/");
+      }, 1500);
     } catch (err) {
       console.error("Google auth error:", err);
       console.error("Error details:", {

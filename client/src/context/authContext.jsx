@@ -4,11 +4,8 @@ import React, {
   useEffect,
   useContext,
   useCallback,
-  useRef,
 } from "react";
 import axios from "axios";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../utils/firebase";
 import { serverUrl } from "../App";
 
 const AuthContext = createContext();
@@ -22,51 +19,6 @@ export const getAuthHeaders = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Keep a ref in sync with `user` so the listener below can read the
-  // latest value without needing to be re-subscribed every time it changes.
-  const userRef = useRef(user);
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
-
-  console.log("[AuthContext] VITE_FIREBASE_API_KEY:", import.meta.env.VITE_FIREBASE_API_KEY);
-
-  // Listen for auth state changes (including redirects and popups).
-  // This is registered ONCE (empty dependency array) so it isn't torn
-  // down and rebuilt on every auth change, which previously caused
-  // duplicate backend calls and could drop the event fired right after
-  // a production redirect sign-in completed.
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("[AuthContext] Auth state changed:", firebaseUser);
-
-      // If we already have a user from localStorage/checkAuth, skip to avoid duplicates
-      if (firebaseUser && !userRef.current) {
-        const name = firebaseUser.displayName;
-        const email = firebaseUser.email;
-        console.log("[AuthContext] Sending to backend:", { name, email });
-        try {
-          const backendResult = await axios.post(
-            serverUrl + "/api/auth/google",
-            { name, email }
-          );
-          console.log("[AuthContext] Backend response:", backendResult.data);
-          setAuth(backendResult.data.user, backendResult.data.token);
-        } catch (err) {
-          console.error("[AuthContext] Backend auth error:", err);
-        }
-      }
-
-      // If not logged in via Firebase, check localStorage
-      if (!firebaseUser && !userRef.current) {
-        setTimeout(() => checkAuth(), 100);
-      }
-    });
-
-    // Cleanup listener on unmount
-    return () => unsubscribe();
-  }, []); // Registered once; reads latest user via userRef
 
   const checkAuth = useCallback(async () => {
     try {
@@ -102,9 +54,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Sign out from Firebase first
-      await signOut(auth);
-      // Then call backend logout
       await axios.get(`${serverUrl}/api/auth/logout`, {
         headers: getAuthHeaders(),
       });
