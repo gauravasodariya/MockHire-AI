@@ -22,7 +22,6 @@ function Auth({ isModel = false, onClose }) {
   const { setAuth } = useAuth();
   const navigate = useNavigate();
 
-  // Handle redirect result when component mounts
   useEffect(() => {
     const handleRedirectResult = async () => {
       try {

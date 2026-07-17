@@ -12,7 +12,7 @@
   "dependencies": {
     "@vladmandic/face-api": "^1.7.15",
     "axios": "^1.18.1",
-    "firebase": "^12.15.0",
+    "firebase": "^12.16.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "motion": "^12.42.2",

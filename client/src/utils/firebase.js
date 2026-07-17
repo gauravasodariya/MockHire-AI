@@ -3,11 +3,11 @@ import {getAuth,GoogleAuthProvider} from "firebase/auth"
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "mockhireai-b11f0.firebaseapp.com",
-  projectId: "mockhireai-b11f0",
-  storageBucket: "mockhireai-b11f0.firebasestorage.app",
-  messagingSenderId: "124086401385",
-  appId: "1:124086401385:web:dbb5417bfe27131938e5f8"
+  authDomain: "mockhireai-8f59c.firebaseapp.com",
+  projectId: "mockhireai-8f59c",
+  storageBucket: "mockhireai-8f59c.firebasestorage.app",
+  messagingSenderId: "92409906452",
+  appId: "1:92409906452:web:59b4bdf8b79fedbc7fae01"
 };
 
 const app = initializeApp(firebaseConfig);
