@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react'
-import maleVideo from "../assets/videos/male-ai.mp4"
-import femaleVideo from "../assets/videos/female-ai.mp4"
-import Timer from './Timer'
-import { motion, AnimatePresence } from "framer-motion"
-import { FaMicrophone, FaMicrophoneSlash, FaVideo } from "react-icons/fa"
-import axios from "axios"
-import { serverUrl } from '../App'
-import { getAuthHeaders } from '../context/authContext'
-import * as faceapi from '@vladmandic/face-api'
+import React, { useState, useRef, useEffect } from "react";
+import maleVideo from "../assets/videos/male-ai.mp4";
+import femaleVideo from "../assets/videos/female-ai.mp4";
+import Timer from "./Timer";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaMicrophone, FaMicrophoneSlash, FaVideo } from "react-icons/fa";
+import axios from "axios";
+import { serverUrl } from "../App";
+import { getAuthHeaders } from "../context/authContext";
+import * as faceapi from "@vladmandic/face-api";
 
 function InterviewSession({ interviewData, onFinish }) {
   const { interviewId, questions, userName } = interviewData;
@@ -26,25 +26,26 @@ function InterviewSession({ interviewData, onFinish }) {
   const [subtitle, setSubtitle] = useState("");
   const [error, setError] = useState("");
   const [webcamFeedback, setWebcamFeedback] = useState("");
-  
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+
   const videoRef = useRef(null);
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const detectionIntervalRef = useRef(null);
-  let lookingAwayCount = 0;
-  let totalFrames = 0;
+  const lookingAwayCountRef = useRef(0);
+  const totalFramesRef = useRef(0);
 
   useEffect(() => {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (!voices.length) return;
 
-      const femaleVoice =
-        voices.find(v =>
+      const femaleVoice = voices.find(
+        (v) =>
           v.name.toLowerCase().includes("zira") ||
           v.name.toLowerCase().includes("samantha") ||
-          v.name.toLowerCase().includes("female")
-        );
+          v.name.toLowerCase().includes("female"),
+      );
 
       if (femaleVoice) {
         setSelectedVoice(femaleVoice);
@@ -52,12 +53,12 @@ function InterviewSession({ interviewData, onFinish }) {
         return;
       }
 
-      const maleVoice =
-        voices.find(v =>
+      const maleVoice = voices.find(
+        (v) =>
           v.name.toLowerCase().includes("david") ||
           v.name.toLowerCase().includes("mark") ||
-          v.name.toLowerCase().includes("male")
-        );
+          v.name.toLowerCase().includes("male"),
+      );
 
       if (maleVoice) {
         setSelectedVoice(maleVoice);
@@ -71,89 +72,121 @@ function InterviewSession({ interviewData, onFinish }) {
 
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-
-  }, [])
+  }, []);
 
   useEffect(() => {
     const loadFaceApiModels = async () => {
       try {
-        const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model"
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
-        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        const MODEL_URL =
+          "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        setModelsLoaded(true);
       } catch (err) {
-        console.log("Error loading face-api models:", err)
+        console.log("Error loading face-api models:", err);
+        setWebcamFeedback("Face tracking unavailable (models failed to load).");
       }
-    }
-    loadFaceApiModels()
-  }, [])
+    };
+    loadFaceApiModels();
+  }, []);
 
   const startWebcam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: false
-      })
+        audio: false,
+      });
       if (webcamRef.current) {
-        webcamRef.current.srcObject = stream
-        webcamRef.current.play()
+        webcamRef.current.srcObject = stream;
+        webcamRef.current.play();
       }
-      setIsCameraOn(true)
-      startFaceDetection()
+      setIsCameraOn(true);
+      startFaceDetection();
     } catch (err) {
-      console.log("Error accessing webcam:", err)
-      setWebcamFeedback("Could not access webcam.")
+      console.log("Error accessing webcam:", err);
+      setWebcamFeedback("Could not access webcam.");
     }
-  }
+  };
 
   const stopWebcam = () => {
     if (webcamRef.current && webcamRef.current.srcObject) {
-      webcamRef.current.srcObject.getTracks().forEach(track => track.stop())
+      webcamRef.current.srcObject.getTracks().forEach((track) => track.stop());
     }
-    setIsCameraOn(false)
+    setIsCameraOn(false);
     if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current)
+      clearInterval(detectionIntervalRef.current);
     }
-  }
+  };
 
   const startFaceDetection = () => {
     detectionIntervalRef.current = setInterval(async () => {
-      if (webcamRef.current && canvasRef.current && !isAIPlaying) {
-        const options = new faceapi.TinyFaceDetectorOptions()
-        const result = await faceapi.detectSingleFace(webcamRef.current, options).withFaceLandmarks()
-        
+      if (!modelsLoaded) return;
+      if (webcamRef.current && canvasRef.current) {
+        let result;
+        try {
+          const options = new faceapi.TinyFaceDetectorOptions();
+          result = await faceapi
+            .detectSingleFace(webcamRef.current, options)
+            .withFaceLandmarks();
+        } catch (err) {
+          console.log("Face detection frame error:", err);
+          return;
+        }
+
+        // Resize canvas to match video
+        const video = webcamRef.current;
+        const canvas = canvasRef.current;
+        const displaySize = {
+          width: video.videoWidth,
+          height: video.videoHeight,
+        };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        // Clear previous drawings
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         if (result) {
-          totalFrames++
-          const nose = result.landmarks.getNose()
-          const leftEye = result.landmarks.getLeftEye()
-          const rightEye = result.landmarks.getRightEye()
-          
-          const noseX = nose[30].x
-          const leftEyeX = leftEye[0].x
-          const rightEyeX = rightEye[0].x
-          const faceWidth = rightEyeX - leftEyeX
-          const eyeCenterX = (leftEyeX + rightEyeX) / 2
-          
-          const offset = Math.abs(noseX - eyeCenterX)
+          // Resize detection to match canvas
+          const resizedResult = faceapi.resizeResults(result, displaySize);
+
+          // Draw detection box and landmarks
+          faceapi.draw.drawDetections(canvas, resizedResult);
+          faceapi.draw.drawFaceLandmarks(canvas, resizedResult);
+
+          totalFramesRef.current++;
+          const nose = result.landmarks.getNose();
+          const leftEye = result.landmarks.getLeftEye();
+          const rightEye = result.landmarks.getRightEye();
+
+          const noseX = nose[30].x;
+          const leftEyeX = leftEye[0].x;
+          const rightEyeX = rightEye[0].x;
+          const faceWidth = rightEyeX - leftEyeX;
+          const eyeCenterX = (leftEyeX + rightEyeX) / 2;
+
+          const offset = Math.abs(noseX - eyeCenterX);
           if (offset > faceWidth * 0.25) {
-            lookingAwayCount++
+            lookingAwayCountRef.current++;
           }
-          
-          if (totalFrames > 30) {
-            const lookingAwayPercentage = (lookingAwayCount / totalFrames) * 100
+
+          if (totalFramesRef.current > 30) {
+            const lookingAwayPercentage =
+              (lookingAwayCountRef.current / totalFramesRef.current) * 100;
             if (lookingAwayPercentage > 60) {
-              setWebcamFeedback("Try to look at the camera more!")
+              setWebcamFeedback("Try to look at the camera more!");
             } else if (lookingAwayPercentage > 30) {
-              setWebcamFeedback("Good, but try to maintain eye contact.")
+              setWebcamFeedback("Good, but try to maintain eye contact.");
             } else {
-              setWebcamFeedback("Great eye contact!")
+              setWebcamFeedback("Great eye contact!");
             }
-            totalFrames = 0
-            lookingAwayCount = 0
+            totalFramesRef.current = 0;
+            lookingAwayCountRef.current = 0;
           }
         }
       }
-    }, 100)
-  }
+    }, 100);
+  };
 
   const videoSource = voiceGender === "male" ? maleVideo : femaleVideo;
 
@@ -166,16 +199,14 @@ function InterviewSession({ interviewData, onFinish }) {
 
       window.speechSynthesis.cancel();
 
-      const humanText = text
-        .replace(/,/g, ", ... ")
-        .replace(/\./g, ". ... ");
+      const humanText = text.replace(/,/g, ", ... ").replace(/\./g, ". ... ");
 
       const utterance = new SpeechSynthesisUtterance(humanText);
 
       utterance.voice = selectedVoice;
 
-      utterance.rate = 0.92;    
-      utterance.pitch = 1.05;   
+      utterance.rate = 0.92;
+      utterance.pitch = 1.05;
       utterance.volume = 1;
 
       utterance.onstart = () => {
@@ -209,16 +240,16 @@ function InterviewSession({ interviewData, onFinish }) {
     const runIntro = async () => {
       if (isIntroPhase) {
         await speakText(
-          `Hi ${userName}, it's great to meet you today. I hope you're feeling confident and ready.`
+          `Hi ${userName}, it's great to meet you today. I hope you're feeling confident and ready.`,
         );
 
         await speakText(
-          "I'll ask you a few questions. Just answer naturally, and take your time. Let's begin."
+          "I'll ask you a few questions. Just answer naturally, and take your time. Let's begin.",
         );
 
         setIsIntroPhase(false);
       } else if (questions[currentIndex]) {
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise((r) => setTimeout(r, 800));
 
         if (currentIndex === questions.length - 1) {
           await speakText("Alright, this one might be a bit more challenging.");
@@ -230,29 +261,27 @@ function InterviewSession({ interviewData, onFinish }) {
           startMic();
         }
       }
-    }
+    };
 
-    runIntro()
-  }, [selectedVoice, isIntroPhase, currentIndex])
+    runIntro();
+  }, [selectedVoice, isIntroPhase, currentIndex]);
 
   useEffect(() => {
     if (isIntroPhase) return;
     if (!questions[currentIndex]) return;
-    
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer)
+          clearInterval(timer);
           return 0;
         }
-        return prev - 1
-
-      })
+        return prev - 1;
+      });
     }, 1000);
 
-    return () => clearInterval(timer)
-
-  }, [isIntroPhase, currentIndex])
+    return () => clearInterval(timer);
+  }, [isIntroPhase, currentIndex]);
 
   useEffect(() => {
     if (!isIntroPhase && questions[currentIndex]) {
@@ -269,22 +298,19 @@ function InterviewSession({ interviewData, onFinish }) {
     recognition.interimResults = false;
 
     recognition.onresult = (event) => {
-      const transcript =
-        event.results[event.results.length - 1][0].transcript;
+      const transcript = event.results[event.results.length - 1][0].transcript;
 
       setAnswer((prev) => prev + " " + transcript);
     };
 
     recognitionRef.current = recognition;
-
   }, []);
-
 
   const startMic = () => {
     if (recognitionRef.current && !isAIPlaying) {
       try {
         recognitionRef.current.start();
-      } catch { }
+      } catch {}
     }
   };
 
@@ -309,18 +335,25 @@ function InterviewSession({ interviewData, onFinish }) {
     setIsSubmitting(true);
 
     try {
-      const result = await axios.post(serverUrl + "/api/interview/submit-answer", {
-        interviewId,
-        questionIndex: currentIndex,
-        answer,
-        timeTaken: questions[currentIndex].timeLimit - timeLeft,
-      }, { headers: getAuthHeaders() });
+      const result = await axios.post(
+        serverUrl + "/api/interview/submit-answer",
+        {
+          interviewId,
+          questionIndex: currentIndex,
+          answer,
+          timeTaken: questions[currentIndex].timeLimit - timeLeft,
+        },
+        { headers: getAuthHeaders() },
+      );
 
       setFeedback(result.data.feedback);
       speakText(result.data.feedback);
       setIsSubmitting(false);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit answer. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          "Failed to submit answer. Please try again.",
+      );
       setIsSubmitting(false);
     }
   };
@@ -350,12 +383,19 @@ function InterviewSession({ interviewData, onFinish }) {
     setIsMicOn(false);
     setError("");
     try {
-      const result = await axios.post(serverUrl + "/api/interview/finish-interview", { interviewId }, { headers: getAuthHeaders() });
+      const result = await axios.post(
+        serverUrl + "/api/interview/finish-interview",
+        { interviewId },
+        { headers: getAuthHeaders() },
+      );
 
       console.log(result.data);
       onFinish(result.data);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to complete interview. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          "Failed to complete interview. Please try again.",
+      );
     }
   };
 
@@ -377,17 +417,17 @@ function InterviewSession({ interviewData, onFinish }) {
 
       window.speechSynthesis.cancel();
       if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current)
+        clearInterval(detectionIntervalRef.current);
       }
-      stopWebcam()
+      stopWebcam();
     };
   }, []);
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-100 flex items-center justify-center p-4 sm:p-6'>
-      <div className='w-full max-w-6xl min-h-[85vh] bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden'>
-        <div className='w-full lg:w-[35%] bg-white flex flex-col items-center p-6 space-y-6 border-r border-gray-200'>
-          <div className='w-full max-w-md rounded-2xl overflow-hidden shadow-xl'>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-100 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-6xl min-h-[85vh] bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden">
+        <div className="w-full lg:w-[35%] bg-white flex flex-col items-center p-6 space-y-6 border-r border-gray-200">
+          <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-xl">
             <video
               src={videoSource}
               key={videoSource}
@@ -400,51 +440,60 @@ function InterviewSession({ interviewData, onFinish }) {
           </div>
 
           {subtitle && (
-            <div className='w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm'>
-              <p className='text-gray-700 text-sm sm:text-base font-medium text-center leading-relaxed'>{subtitle}</p>
+            <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+              <p className="text-gray-700 text-sm sm:text-base font-medium text-center leading-relaxed">
+                {subtitle}
+              </p>
             </div>
           )}
 
-          <div className='w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-md p-6 space-y-5'>
-            <div className='flex justify-between items-center'>
-              <span className='text-sm text-gray-500'>
-                Interview Status
-              </span>
-              {isAIPlaying && <span className='text-sm font-semibold text-emerald-600'>
-                {isAIPlaying ? "AI Speaking" : ""}
-              </span>}
+          <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-md p-6 space-y-5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">Interview Status</span>
+              {isAIPlaying && (
+                <span className="text-sm font-semibold text-emerald-600">
+                  {isAIPlaying ? "AI Speaking" : ""}
+                </span>
+              )}
             </div>
 
             <div className="h-px bg-gray-200"></div>
 
-            <div className='flex justify-center'>
-              <Timer timeLeft={timeLeft} totalTime={questions[currentIndex]?.timeLimit} />
+            <div className="flex justify-center">
+              <Timer
+                timeLeft={timeLeft}
+                totalTime={questions[currentIndex]?.timeLimit}
+              />
             </div>
 
             <div className="h-px bg-gray-200"></div>
 
-            <div className='grid grid-cols-2 gap-6 text-center'>
+            <div className="grid grid-cols-2 gap-6 text-center">
               <div>
-                <span className='text-2xl font-bold text-emerald-600'>{currentIndex + 1}</span>
-                <span className='text-xs text-gray-400'>Current Question</span>
+                <span className="text-2xl font-bold text-emerald-600">
+                  {currentIndex + 1}
+                </span>
+                <span className="text-xs text-gray-400">Current Question</span>
               </div>
 
               <div>
-                <span className='text-2xl font-bold text-emerald-600'>{questions.length}</span>
-                <span className='text-xs text-gray-400'>Total Questions</span>
+                <span className="text-2xl font-bold text-emerald-600">
+                  {questions.length}
+                </span>
+                <span className="text-xs text-gray-400">Total Questions</span>
               </div>
             </div>
 
             {isCameraOn && webcamFeedback && (
-              <div className='bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 text-center'>
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 text-center">
                 {webcamFeedback}
               </div>
             )}
           </div>
         </div>
 
-        <div className='flex-1 flex flex-col p-4 sm:p-6 md:p-8 relative'>
-          <h2 className='text-xl sm:text-2xl font-bold text-emerald-600 mb-6'>
+        <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 relative">
+          <h2 className="text-xl sm:text-2xl font-bold text-emerald-600 mb-6">
             AI Smart Interview
           </h2>
 
@@ -462,34 +511,36 @@ function InterviewSession({ interviewData, onFinish }) {
           </AnimatePresence>
 
           {!isIntroPhase && (
-            <div className='relative mb-6 bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm'>
-              <p className='text-xs sm:text-sm text-gray-400 mb-2'>
+            <div className="relative mb-6 bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs sm:text-sm text-gray-400 mb-2">
                 Question {currentIndex + 1} of {questions.length}
               </p>
-              <div className='text-base sm:text-lg font-semibold text-gray-800 leading-relaxed '>{questions[currentIndex]?.question}</div>
+              <div className="text-base sm:text-lg font-semibold text-gray-800 leading-relaxed ">
+                {questions[currentIndex]?.question}
+              </div>
             </div>
           )}
 
           {!isIntroPhase && (
-            <div className='flex gap-3 mb-4'>
+            <div className="flex gap-3 mb-4">
               <motion.button
-                onClick={() => isCameraOn ? stopWebcam() : startWebcam()}
-                className={`p-3 rounded-full ${isCameraOn ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}
+                onClick={() => (isCameraOn ? stopWebcam() : startWebcam())}
+                className={`p-3 rounded-full ${isCameraOn ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}
                 whileTap={{ scale: 0.9 }}
               >
                 <FaVideo size={20} />
               </motion.button>
               {isCameraOn && (
-                <div className='w-32 h-24 rounded-lg overflow-hidden border border-gray-300 relative'>
+                <div className="w-32 h-24 rounded-lg overflow-hidden border border-gray-300 relative">
                   <video
                     ref={webcamRef}
-                    className='w-full h-full object-cover'
+                    className="w-full h-full object-cover"
                     playsInline
                     muted
                   />
                   <canvas
                     ref={canvasRef}
-                    className='absolute top-0 left-0 w-full h-full'
+                    className="absolute top-0 left-0 w-full h-full"
                   />
                 </div>
               )}
@@ -504,51 +555,57 @@ function InterviewSession({ interviewData, onFinish }) {
           />
 
           {!feedback ? (
-            <div className='flex items-center gap-4 mt-6'>
+            <div className="flex items-center gap-4 mt-6">
               <motion.button
                 onClick={toggleMic}
                 whileTap={{ scale: 0.9 }}
-                className='w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black text-white shadow-lg'
+                className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black text-white shadow-lg"
               >
-                {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
+                {isMicOn ? (
+                  <FaMicrophone size={20} />
+                ) : (
+                  <FaMicrophoneSlash size={20} />
+                )}
               </motion.button>
 
               <motion.button
                 onClick={submitAnswer}
                 disabled={isSubmitting}
                 whileTap={{ scale: 0.95 }}
-                className='flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 cursor-pointer'
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <div className='flex items-center justify-center space-x-2'>
-                    <div className='w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin' />
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>Submitting...</span>
                   </div>
-                ) : "Submit Answer"}
+                ) : (
+                  "Submit Answer"
+                )}
               </motion.button>
-
             </div>
           ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className='mt-6 bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm'
+              className="mt-6 bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm"
             >
-              <p className='text-emerald-700 font-medium mb-4'>{feedback}</p>
+              <p className="text-emerald-700 font-medium mb-4">{feedback}</p>
 
               <button
                 onClick={handleNext}
-                className='w-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-1'
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-1"
               >
-                {currentIndex + 1 >= questions.length ? "Finish Interview" : "Next Question"}
+                {currentIndex + 1 >= questions.length
+                  ? "Finish Interview"
+                  : "Next Question"}
               </button>
-
             </motion.div>
           )}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default InterviewSession
+export default InterviewSession;

@@ -9,7 +9,7 @@ const firebaseConfig = {
   messagingSenderId: "92409906452",
   appId: "1:92409906452:web:59b4bdf8b79fedbc7fae01"
 };
-console.log(import.meta.env.VITE_FIREBASE_API_KEY)
+
 const app = initializeApp(firebaseConfig);
 
 const auth=getAuth(app)
